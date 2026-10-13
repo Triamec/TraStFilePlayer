@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+      <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+      <MSBuildWarningsAsMessages>CS0618</MSBuildWarningsAsMessages>
+      <NoWarn>$(NoWarn);CA1515</NoWarn>
+
+      <OutputType>Exe</OutputType>
+      <RootNamespace>TraStFilePlayer</RootNamespace>
+      <UseMaui>true</UseMaui>
+      <SingleProject>true</SingleProject>
+      <ImplicitUsings>enable</ImplicitUsings>
+      <EnableDefaultCssItems>false</EnableDefaultCssItems>
+      <Nullable>enable</Nullable>
+
+      <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+      <!-- Display name -->
+      <ApplicationTitle>Trast File Player</ApplicationTitle>
+
+      <!-- App Identifier -->
+      <ApplicationId>com.triamec.trastfileplayer</ApplicationId>
+
+      <!-- Versions -->
+      <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+      <ApplicationVersion>1</ApplicationVersion>
+
+      <WindowsPackageType>None</WindowsPackageType>
+
+      <!-- TODO Review wk P2:TargetFrameworks says 10.0.19041.0 here we have 10.0.17763.0, is it intentional? -->
+      <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
+      <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetFramework)'=='net10.0-windows10.0.19041.0'">
+      <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+      <RuntimeIdentifier Condition="'$(RuntimeIdentifier)'==''">win-x64</RuntimeIdentifier>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- App Icon -->
+      <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" />
+
+      <!-- Splash Screen -->
+      <MauiSplashScreen Include="Resources\Splash\splash.svg" BaseSize="128,128" />
+
+      <!-- Images -->
+      <MauiImage Include="Resources\Images\*" />
+
+      <!-- Custom Fonts -->
+      <MauiFont Include="Resources\Fonts\*" />
+
+      <!-- Raw Assets -->
+      <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- TODO Review wk P3: AI says its old, but its not vulnerable? (its a philosophical question to update it) -->
+      <PackageReference Include="Markdig" Version="1.1.2" />
+      <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+      <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Triamec.Tam.Motion" Version="1.1.0" />
+      <PackageReference Include="Triamec.Tam.Motion.TrajectoryStreaming" Version="1.1.0-beta.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Doc\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <MauiAsset Include="Doc\About.md">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </MauiAsset>
+    </ItemGroup>
+
+</Project>

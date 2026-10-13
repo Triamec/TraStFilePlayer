@@ -1,0 +1,45 @@
+@using Markdig
+
+<div class="about-page">
+    @((MarkupString)_htmlContent)
+</div>
+
+@code {
+    string _htmlContent = "";
+
+    protected override async Task OnInitializedAsync() {
+        try {
+            string markdown = await LoadAboutMarkdownAsync();
+            var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            _htmlContent = Markdown.ToHtml(markdown, pipeline);
+        } catch (Exception ex) {
+            _htmlContent = $"<p>Error loading about page: {ex.Message}</p>";
+        }
+    }
+
+    static async Task<string> LoadAboutMarkdownAsync() {
+        string[] appPackageCandidates = ["Doc/About.md", "About.md"];
+        foreach (string candidate in appPackageCandidates) {
+            try {
+                using Stream stream = await FileSystem.OpenAppPackageFileAsync(candidate);
+                using var reader = new StreamReader(stream);
+                return await reader.ReadToEndAsync();
+            } catch {
+                // Try next candidate.
+            }
+        }
+
+        string[] diskCandidates = [
+            Path.Combine(AppContext.BaseDirectory, "Doc", "About.md"),
+            Path.Combine(AppContext.BaseDirectory, "About.md")
+        ];
+
+        foreach (string candidate in diskCandidates) {
+            if (File.Exists(candidate)) {
+                return await File.ReadAllTextAsync(candidate);
+            }
+        }
+
+        return "# About\n\nAbout document not found.";
+    }
+}

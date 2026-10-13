@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Trast File Player</title>
+    <base href="/" />
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="TraStFilePlayer.styles.css" />
+    <link rel="icon" href="data:,">
+</head>
+
+<body>
+
+    <div class="status-bar-safe-area"></div>
+
+    <div id="app">Loading...</div>
+
+    <div id="blazor-error-ui" data-nosnippet>
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <script>
+        window.trastFilePlayer = window.trastFilePlayer || {};
+        window.trastFilePlayer.scrollToBottom = function (element) {
+            if (!element) return;
+            element.scrollTop = element.scrollHeight;
+        };
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key && /^F([1-9]|1[0-2])$/.test(event.key)) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        }, true);
+    </script>
+
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,555 @@
+@page "/"
+@using TraStFilePlayer.Models
+@using TraStFilePlayer.Services
+@using Triamec.Tam.Motion.TrajectoryStreaming.Parser
+@inject MotionSystemService MotionSystemService
+@inject PlaybackService PlaybackService
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="top-row header-layout">
+    <button class="btn btn-secondary reconnect-button"
+            @onclick="OnRestartAsync"
+            disabled="@(!UiState.CanRestart || MotionSystemService.IsConnecting || _busy)"
+            title="Restart Trast File Player">
+        Restart
+    </button>
+    <h1 class="app-title">Trast File Player</h1>
+    <a href="" class="about-link" @onclick="ShowAboutOverlay" @onclick:preventDefault="true">About</a>
+</div>
+
+@if (_isAboutOverlayVisible)
+{
+    <div class="about-overlay-backdrop" @onclick="HideAboutOverlay">
+        <div class="about-overlay-panel" @onclick:stopPropagation="true">
+            <div class="about-overlay-header">
+                <h2>About</h2>
+                <button type="button" class="about-close" @onclick="HideAboutOverlay">Close</button>
+            </div>
+            <div class="about-overlay-content">
+                <About />
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!--  File Selection                                                        -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>Trajectory File</h2>
+
+    <div class="file-row">
+        <button class="btn btn-primary wide-button" @onclick="OnOpenAsync" disabled="@(!UiState.CanOpen || _busy)">Open</button>
+
+        <div class="recent-dropdown @(_recentDropdownOpen ? "open" : "")">
+            <button class="btn btn-secondary recent-dropdown-toggle wide-button"
+                    @onclick="ToggleRecentDropdown"
+                    disabled="@(!UiState.CanOpen || _busy || _recentFiles.Count == 0)">
+                Recent ▾
+            </button>
+            @if (_recentDropdownOpen) {
+                <div class="recent-dropdown-menu">
+                    @foreach (var f in _recentFiles) {
+                        var filePath = f;
+                        <button class="recent-dropdown-item" @onclick="() => OnRecentFileClickedAsync(filePath)">
+                            @System.IO.Path.GetFileName(filePath)
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="file-info">
+            <strong>Loaded:</strong>
+            @if (!string.IsNullOrEmpty(_loadedFilePath)) {
+                <span class="file-info-details">
+                    <span class="file-info-name">@System.IO.Path.GetFileName(_loadedFilePath)</span>
+                    @if (_header != null) {
+                        <span class="meta">
+                            @_header.NumberOfInvolvedAxes axes, @_header.NumberOfDataRows rows,
+                            @_header.SamplingFrequencyHz Hz
+                        </span>
+                    }
+                </span>
+            }
+            else {
+                <span class="file-info-details">
+                    <span class="file-info-placeholder">No file loaded</span>
+                    <span class="meta file-info-placeholder-meta">&nbsp;</span>
+                </span>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!--  Controls                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>Controls</h2>
+
+    <div class="button-row">
+        @if (UiState.CanDisable) {
+            <button class="btn btn-warning wide-button" @onclick="OnDisableAsync" disabled="@_busy">Disable</button>
+        }
+        else {
+            <button class="btn btn-secondary wide-button" @onclick="OnEnableAsync" disabled="@(!UiState.CanEnable || _busy)">Enable</button>
+        }
+
+        <button class="btn btn-secondary wide-button" @onclick="OnHomeAsync"
+                disabled="@(!UiState.CanHome || _busy)">
+            Home
+        </button>
+
+        <button class="btn btn-secondary wide-button" @onclick="OnInitMoveAsync"
+                disabled="@(!UiState.CanInitMove || _busy || IsAtInitialPosition() || !MotionSystemService.AreAxesInStandstill())">
+            Init Move
+        </button>
+
+        <label class="loop-label">
+            <input type="checkbox" @bind="PlaybackService.LoopEnabled" />
+            Loop
+        </label>
+
+        <button class="btn btn-danger-outline wide-button" @onclick="OnResetErrorAsync"
+                disabled="@(!UiState.CanResetError || _busy)">
+            Reset Error
+        </button>
+    </div>
+
+    <div class="button-row">
+        <button class="btn btn-success wide-button" @onclick="OnPlayAsync"
+                disabled="@(!UiState.CanPlay || _busy)">
+            ▶ Play
+        </button>
+
+        <button class="btn btn-warning wide-button" @onclick="OnPause"
+                disabled="@(!UiState.CanPause)">
+            ⏸ Pause
+        </button>
+
+        <button class="btn btn-danger wide-button" @onclick="OnStopAsync"
+                disabled="@(!UiState.CanStop || _busy)">
+            ■ Stop
+        </button>
+
+        <div class="override-group">
+            <label>Feed Override: <strong>@((int)PlaybackService.FeedOverride) %</strong></label>
+            <input type="range" min="0" max="100" step="1"
+                   value="@((int)PlaybackService.FeedOverride)"
+                   @oninput="OnOverrideChanged" />
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!--  Status and Progress                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<div class="section">
+    <h2>Status</h2>
+
+    <div class="status-grid">
+        <div class="status-item">
+            <span class="status-label">Motion System:</span>
+            <span class="@(MotionSystemService.IsConnected ? "status-ok" : "status-off")">
+                @(MotionSystemService.IsConnected ? "Connected" : "Disconnected")
+            </span>
+        </div>
+
+        <div class="status-item">
+            <span class="status-label">Axes enabled:</span>
+            <span class="@(MotionSystemService.AreAxesEnabled() ? "status-ok" : "status-off")">
+                @(MotionSystemService.AreAxesEnabled() ? "Yes" : "No")
+            </span>
+        </div>
+
+        <div class="status-item">
+            <span class="status-label">Axes homed:</span>
+            <span class="@(MotionSystemService.AreAxesHomed() ? "status-ok" : "status-off")">
+                @(MotionSystemService.AreAxesHomed() ? "Yes" : "No")
+            </span>
+        </div>
+
+        <div class="status-item">
+            <span class="status-label">Streaming:</span>
+            <span class="@(PlaybackService.IsStreaming ? "status-ok" : "status-off")">
+                @(PlaybackService.IsPaused ? "Paused" : PlaybackService.IsStreaming ? "Active" : "Idle")
+            </span>
+        </div>
+    </div>
+
+    <!-- Progress bar -->
+    @{
+        double pct = PlaybackService.TotalPoints > 0
+            ? 100.0 * PlaybackService.ActualIndex / PlaybackService.TotalPoints
+            : 0.0;
+        pct = Math.Min(pct, 100.0);
+    }
+    <div class="progress-section">
+        <div class="progress-label">
+            Progress: @PlaybackService.ActualIndex / @PlaybackService.TotalPoints points
+            (@pct.ToString("F1") %)
+        </div>
+        <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: @pct.ToString("F1")%;"></div>
+        </div>
+    </div>
+
+    <!-- Notification panel -->
+    <div @ref="_notificationPanelRef" class="notification @(_hasError ? "notification-error" : "notification-info")">
+        @foreach (var line in _notificationLines) {
+            <div>@line</div>
+        }
+    </div>
+</div>
+
+@code {
+    // ── State ───────────────────────────────────────────────────────────
+    PlaybackState _state = PlaybackState.NoMotionSystem;
+    UiCommandState UiState => UiCommandState.From(_state);
+
+    bool _isAboutOverlayVisible;
+
+    Triamec.Tam.Motion.TrajectoryStreaming.Parser.TraStHeader? _header;
+    string? _loadedFilePath;
+    double[]? _initialPositions;
+
+    List<string> _recentFiles = [];
+    bool _recentDropdownOpen;
+
+    readonly List<string> _notificationLines = [];
+    bool _hasError;
+    bool _hasInvalidFile;
+    bool _busy;
+
+    CancellationTokenSource? _statePollingCts;
+    Task? _statePollingTask;
+
+    ElementReference _notificationPanelRef;
+    int _notificationVersion;
+    int _lastScrolledNotificationVersion;
+    bool _shouldScrollNotifications;
+
+    // ── Lifecycle ───────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync() {
+        _recentFiles = new List<string>(RecentFilesService.RecentFiles);
+        StartStatePolling();
+
+        try {
+            AddNotification("Connecting to motion system ...");
+            await MotionSystemService.ConnectAsync();
+            AddNotification("Motion system connected.");
+        }
+        catch (Exception ex) {
+            AddNotification($"Could not connect to motion system: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (!_shouldScrollNotifications || _notificationVersion == _lastScrolledNotificationVersion) return;
+
+        _shouldScrollNotifications = false;
+        _lastScrolledNotificationVersion = _notificationVersion;
+
+        try {
+            await JS.InvokeVoidAsync("trastFilePlayer.scrollToBottom", _notificationPanelRef);
+        }
+        catch {
+        }
+    }
+
+    // ── File operations ─────────────────────────────────────────────────
+
+    async Task OnOpenAsync() {
+        await ExecuteAsync(async () => {
+            string? path = await RecentFilesService.ShowOpenFileDialogAsync();
+            if (path == null) {
+                AddNotification("File selection cancelled.");
+                return;
+            }
+            await LoadFileAsync(path);
+        });
+    }
+
+    void ToggleRecentDropdown() {
+        _recentDropdownOpen = !_recentDropdownOpen;
+    }
+
+    async Task OnRecentFileClickedAsync(string path) {
+        _recentDropdownOpen = false;
+        await ExecuteAsync(() => LoadFileAsync(path));
+    }
+
+    async Task LoadFileAsync(string path) {
+        AddNotification($"- Loading {System.IO.Path.GetFileName(path)} ...");
+
+        _header = null;
+        _loadedFilePath = null;
+        _initialPositions = null;
+        _hasInvalidFile = false;
+
+        try {
+            _header = await Task.Run(() => RecentFilesService.ParseFile(path));
+        }
+        catch (Exception ex) {
+            _hasInvalidFile = true;
+            AddNotification($"Error: {ex.Message}");
+            return;
+        }
+
+        _recentFiles = new List<string>(RecentFilesService.RecentFiles);
+        _loadedFilePath = path;
+
+        // Resolve axes and check prerequisites
+        try {
+            _initialPositions = await Task.Run(() => {
+                using var parser = new TraStCsvParser(path);
+                return parser.PeekFirstDataRow(_header.Axes.Select(a => a.PositionColumnIndex).ToList());
+            });
+
+            await MotionSystemService.PrepareAxisGroupAsync(_header);
+        }
+        catch (Exception ex) {
+            _header = null;
+            _loadedFilePath = null;
+            _initialPositions = null;
+            _hasInvalidFile = true;
+            AddNotification($"Axis check failed: {ex.Message}");
+            return;
+        }
+
+        AddNotification($"- TraSt data file {System.IO.Path.GetFileName(path)} successfully loaded.");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Axis commands ───────────────────────────────────────────────────
+
+    async Task OnEnableAsync() {
+        await ExecuteAsync(async () => {
+            try {
+                await MotionSystemService.EnableAsync();
+                AddNotification("- Axes enabled");
+            }
+            catch (Exception ex) {
+                AddNotification($"Enable failed: {ex.Message}");
+                SetError();
+            }
+        });
+    }
+
+    async Task OnDisableAsync() {
+        await ExecuteAsync(async () => {
+            try {
+                await MotionSystemService.DisableAsync();
+                AddNotification("- Axes disabled");
+            }
+            catch (Exception ex) {
+                AddNotification($"Disable failed: {ex.Message}");
+            }
+        });
+    }
+
+    async Task OnHomeAsync() {
+        await ExecuteAsync(async () => {
+            try {
+                await MotionSystemService.HomeAsync();
+                AddNotification("- Axes homed");
+                if (_initialPositions != null && MotionSystemService.AreAxesAtInitPosition(_initialPositions)) {
+                    AddNotification("- Axes are at the initial trajectory position");
+                }
+            }
+            catch (Exception ex) {
+                AddNotification($"Home failed: {ex.Message}");
+                SetError();
+            }
+        });
+    }
+
+    async Task OnInitMoveAsync() {
+        await ExecuteAsync(async () => {
+            if (_initialPositions == null) return;
+            try {
+                await MotionSystemService.InitMoveAsync(_initialPositions);
+                AddNotification("- Axes are at the initial trajectory position");
+            }
+            catch (Exception ex) {
+                AddNotification($"Init move failed: {ex.Message}");
+                SetError();
+            }
+        });
+    }
+
+    async Task OnResetErrorAsync() {
+        await ExecuteAsync(async () => {
+            try {
+                await MotionSystemService.ResetErrorAsync();
+                _hasError = false;
+                AddNotification("- Errors acknowledged.");
+            }
+            catch (Exception ex) {
+                AddNotification($"Reset error failed: {ex.Message}");
+            }
+        });
+    }
+
+    async Task OnRestartAsync() {
+        await ExecuteAsync(async () => {
+            try {
+        AddNotification("- Restarting Trast File Player...");
+                await PlaybackService.StopAsync();
+                await MotionSystemService.RestartApplicationAsync();
+            }
+            catch (Exception ex) {
+                AddNotification($"Restart failed: {ex.Message}");
+            }
+        });
+    }
+
+    void ShowAboutOverlay() {
+        _isAboutOverlayVisible = true;
+    }
+
+    void HideAboutOverlay() {
+        _isAboutOverlayVisible = false;
+    }
+
+    // ── Playback commands ───────────────────────────────────────────────
+
+    async Task OnPlayAsync() {
+        if (_loadedFilePath == null || _header == null) return;
+        try {
+            await PlaybackService.PlayAsync(_loadedFilePath, _header);
+        }
+        catch (Exception ex) {
+            AddNotification($"Play failed: {ex.Message}");
+            SetError();
+        }
+    }
+
+    void OnPause() {
+        PlaybackService.Pause();
+    }
+
+    async Task OnStopAsync() {
+        await PlaybackService.StopAsync();
+    }
+
+    void OnOverrideChanged(ChangeEventArgs e) {
+        if (double.TryParse(e.Value?.ToString(), out double v)) {
+            PlaybackService.FeedOverride = v;
+        }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────
+
+    async Task ExecuteAsync(Func<Task> action) {
+        _busy = true;
+        StateHasChanged();
+        try {
+            await action();
+        }
+        catch (Exception ex) {
+            AddNotification($"Unexpected error: {ex.Message}");
+        }
+        finally {
+            _busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    void AddNotification(string message) {
+        if (!string.IsNullOrEmpty(message)) {
+            _notificationLines.Add(message);
+            if (_notificationLines.Count > 200) _notificationLines.RemoveAt(0);
+            _notificationVersion++;
+            _shouldScrollNotifications = true;
+        }
+    }
+
+    void SetError() {
+        _hasError = true;
+    }
+
+    bool IsAtInitialPosition() =>
+        _initialPositions != null && MotionSystemService.AreAxesAtInitPosition(_initialPositions);
+
+    void StartStatePolling() {
+        _statePollingCts?.Cancel();
+        _statePollingCts = new CancellationTokenSource();
+        _statePollingTask = StatePollAsync(_statePollingCts.Token);
+    }
+
+    async Task<PlaybackState> GetPlaybackState() {
+        if (MotionSystemService.IsConnecting) return PlaybackState.MotionSystemConnecting;
+
+        if (!MotionSystemService.IsConnected) return PlaybackState.NoMotionSystem;
+
+        if (PlaybackService.IsPlaybackSessionActive) {
+            return PlaybackService.IsPaused ? PlaybackState.StreamingPaused : PlaybackState.Streaming;
+        }
+
+        var axisGroup = MotionSystemService.AxisGroup;
+        if (axisGroup != null && axisGroup.Status.Any.Alert.IsError) return PlaybackState.AxesError;
+
+        if (_hasInvalidFile) return PlaybackState.InvalidFile;
+        if (_loadedFilePath == null || _header == null || _initialPositions == null) return PlaybackState.NoFile;
+
+        if (axisGroup == null) return PlaybackState.InvalidFile;
+
+        if (!MotionSystemService.AreAxesEnabled()) return PlaybackState.AxesNotEnabled;
+
+        if (!axisGroup.Status.All.Standstill) return PlaybackState.NonStreamingMove;
+
+        bool atInitialPosition = MotionSystemService.AreAxesAtInitPosition(_initialPositions);
+        if (!atInitialPosition) return PlaybackState.AxesNotAtInitialPosition;
+
+        return PlaybackState.AxesReadyForStreaming;
+    }
+
+    async Task RefreshPlaybackUiAsync() {
+        _state = await GetPlaybackState();
+        _hasError = _state is PlaybackState.InvalidFile or PlaybackState.AxesError || PlaybackService.HasError;
+        var notificationMessage = PlaybackService.ConsumeNotificationMessage();
+        if (!string.IsNullOrEmpty(notificationMessage)) {
+            AddNotification(notificationMessage);
+        }
+    }
+
+    async Task StatePollAsync(CancellationToken ct) {
+        try {
+            while (!ct.IsCancellationRequested) {
+                await RefreshPlaybackUiAsync();
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(100, ct);
+            }
+        }
+        catch (OperationCanceledException) {
+        }
+    }
+
+    async Task StopStatePollingAsync() {
+        if (_statePollingCts == null) return;
+
+        if (!_statePollingCts.IsCancellationRequested) {
+            await _statePollingCts.CancelAsync();
+        }
+
+        if (_statePollingTask != null) {
+            try {
+                await _statePollingTask;
+            }
+            catch (OperationCanceledException) {
+            }
+        }
+
+        _statePollingCts.Dispose();
+        _statePollingCts = null;
+        _statePollingTask = null;
+    }
+
+    public async ValueTask DisposeAsync() {
+        await StopStatePollingAsync();
+    }
+}
