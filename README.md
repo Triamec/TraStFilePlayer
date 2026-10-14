@@ -14,10 +14,6 @@ The project consumes NuGet packages from [nuget.org](https://www.nuget.org):
 
 In addition, the project consumes local NuGet packages that are released in their Beta versions. These NuGet packages are located in `local-feed` and are automatically added via `NuGet.config`.
 
-- `Triamec.Tam.Motion.TrajectoryStreaming` (`1.1.0-beta.1`)
-
-`Triamec.Tam.Motion` is resolved transitively by design through the package dependency graph.
-
 ## Restore and build
 
 ```powershell
