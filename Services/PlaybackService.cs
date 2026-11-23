@@ -2,7 +2,7 @@
 
 using Triamec.Tam.Motion;
 using Triamec.Tam.Motion.TrajectoryStreaming;
-using SharedTraStHeader = Triamec.Tam.Motion.TrajectoryStreaming.Parser.TraStHeader;
+using SharedTraStHeader = TraStFilePlayer.CsvParser.TraStHeader;
 
 namespace TraStFilePlayer.Services {
 	/// <summary>
@@ -129,7 +129,7 @@ namespace TraStFilePlayer.Services {
 #pragma warning disable CA1031
 			try {
 				do {
-					using var parser = new Triamec.Tam.Motion.TrajectoryStreaming.Parser.TraStCsvParser(filePath);
+					using var parser = new TraStFilePlayer.CsvParser.TraStCsvParser(filePath);
 
 					while (parser.HasMoreData() && !ct.IsCancellationRequested) {
 						var (positions, extensions) = parser.ReadSegment(
@@ -155,7 +155,9 @@ namespace TraStFilePlayer.Services {
 
 					if (ct.IsCancellationRequested) break;
 
-					ThrowIfAxisError();
+					if (_streamer!.IsFaulted) {
+						throw new InvalidOperationException("Streaming fault occurred.");
+					}
 
 					// Check loop condition
 					if (LoopEnabled && !IsPaused) {
@@ -190,13 +192,6 @@ namespace TraStFilePlayer.Services {
 				NotifyStateChanged();
 			}
 #pragma warning restore CA1031
-		}
-
-		void ThrowIfAxisError() {
-			var status = _motionSystem.GetAxisGroup().Status.Any;
-			if (status.ErrorStop || status.Alert.IsError) {
-				throw new InvalidOperationException($"Axis error: {status.Alert.Text}");
-			}
 		}
 
 		async Task<ITrajectoryStreamer> CreateStreamerAsync(SharedTraStHeader header) {

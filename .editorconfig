@@ -1,0 +1,190 @@
+# EditorConfig is awesome:http://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Don't use tabs for indentation.
+[*]
+indent_style                                                        = space
+max_line_length                                                     = 120
+
+# (Please don't specify an indent_size here; that has too many unintended consequences.)
+
+# Code files
+[*.{cs,csx,vb,vbx,cpp,h}]
+indent_style                                                        = tab
+indent_size                                                         = 4
+end_of_line                                                         = crlf
+insert_final_newline                                                = true
+charset                                                             = utf-8-bom
+
+# Xml project files
+[*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
+indent_size                                                         = 2
+
+# Xml config files
+[*.{props,targets,ruleset,config,nuspec,resx,vsixmanifest,vsct}]
+indent_size                                                         = 2
+
+# Xml files
+[*.{xml,xsd,xsl,xslt}]
+indent_size                                                         = 2
+indent_style                                                        = space
+
+# JSON files
+[*.json]
+indent_size                                                         = 2
+
+# Dotnet code style settings:
+[*.{cs,vb}]
+# Sort using and Import directives with System.* appearing first
+dotnet_sort_system_directives_first = false
+# Avoid "this." and "Me." if not necessary
+dotnet_style_qualification_for_field                                = false:suggestion
+dotnet_style_qualification_for_property                             = false:suggestion
+dotnet_style_qualification_for_method                               = false:suggestion
+dotnet_style_qualification_for_event                                = false:suggestion
+
+# Use language keywords instead of framework type names for type references
+dotnet_style_predefined_type_for_locals_parameters_members          = true:suggestion
+dotnet_style_predefined_type_for_member_access                      = true:suggestion
+
+# Suggest more modern language features when available
+dotnet_style_object_initializer                                     = true:suggestion
+dotnet_style_collection_initializer                                 = true:suggestion
+dotnet_style_coalesce_expression                                    = true:suggestion
+dotnet_style_null_propagation                                       = true:suggestion
+dotnet_style_explicit_tuple_names                                   = true:suggestion
+
+# Don't use the private modifier. We know our language.
+dotnet_style_require_accessibility_modifiers                        = never:suggestion
+
+# Constants are pascal cased
+dotnet_naming_rule.constants_are_pascal_cased.symbols               = constants
+dotnet_naming_rule.constants_are_pascal_cased.style = pascal_cased
+dotnet_naming_rule.constants_are_pascal_cased.severity = suggestion
+
+dotnet_naming_symbols.constants.applicable_kinds                    = field
+dotnet_naming_symbols.constants.applicable_accessibilities          = *
+dotnet_naming_symbols.constants.required_modifiers                  = const
+
+# Properties and methods are pascal cased
+dotnet_naming_rule.privatepropsmethods_are_pascal_cased.symbols     = privatepropsmethods
+dotnet_naming_rule.privatepropsmethods_are_pascal_cased.style       = pascal_cased
+dotnet_naming_rule.privatepropsmethods_are_pascal_cased.severity    = suggestion
+
+dotnet_naming_rule.publicpropsmethods_are_pascal_cased.symbols      = publicpropsmethods
+dotnet_naming_rule.publicpropsmethods_are_pascal_cased.style        = pascal_cased
+dotnet_naming_rule.publicpropsmethods_are_pascal_cased.severity     = warning
+
+dotnet_naming_symbols.privatepropsmethods.applicable_kinds           = property,method,event,delegate
+dotnet_naming_symbols.privatepropsmethods.applicable_accessibilities = private,private_protected
+
+dotnet_naming_symbols.publicpropsmethods.applicable_kinds           = property,method,event,delegate
+dotnet_naming_symbols.publicpropsmethods.applicable_accessibilities = public,protected,protected_internal
+
+dotnet_naming_style.pascal_cased.capitalization                     = pascal_case
+
+# Treat static readonly as constant
+dotnet_naming_rule.static_readonlies_are_pascal_cased.symbols       = static_readonlies
+dotnet_naming_rule.static_readonlies_are_pascal_cased.style = pascal_cased
+dotnet_naming_rule.static_readonlies_are_pascal_cased.severity = suggestion
+
+dotnet_naming_symbols.static_readonlies.applicable_kinds            = field
+dotnet_naming_symbols.static_readonlies.applicable_accessibilities  = *
+dotnet_naming_symbols.static_readonlies.required_modifiers          = static,readonly
+
+# Non constant fields start with underscore
+dotnet_naming_rule.non_const_fields_start_with_underscore.symbols   = non_const_fields
+dotnet_naming_rule.non_const_fields_start_with_underscore.style = start_with_underscore
+dotnet_naming_rule.non_const_fields_start_with_underscore.severity = suggestion
+
+dotnet_naming_symbols.non_const_fields.applicable_kinds             = field
+dotnet_naming_symbols.non_const_fields.applicable_accessibilities   = private
+
+dotnet_naming_style.start_with_underscore.required_prefix           = _
+dotnet_naming_style.start_with_underscore.capitalization            = camel_case
+dotnet_style_allow_multiple_blank_lines_experimental = false:suggestion
+
+# CSharp code style settings:
+[*.cs]
+# Prefer "var" when apparent only
+csharp_style_var_for_built_in_types                                 = false:none
+csharp_style_var_when_type_is_apparent                              = true:suggestion
+csharp_style_var_elsewhere                                          = false:none
+
+# Prefer method-like constructs to have an expression-body
+csharp_style_expression_bodied_methods                              = true:suggestion
+csharp_style_expression_bodied_constructors                         = true:suggestion
+csharp_style_expression_bodied_operators                            = true:suggestion
+
+# Prefer property-like constructs to have an expression-body
+csharp_style_expression_bodied_properties                           = true:suggestion
+csharp_style_expression_bodied_indexers                             = true:suggestion
+csharp_style_expression_bodied_accessors                            = true:suggestion
+
+# Suggest more modern language features when available
+csharp_style_pattern_matching_over_is_with_cast_check               = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check               = true:suggestion
+csharp_style_inlined_variable_declaration                           = true:suggestion
+csharp_style_throw_expression                                       = true:suggestion
+csharp_style_conditional_delegate_call                              = true:suggestion
+
+# Newline settings
+csharp_new_line_before_open_brace                                   = none
+csharp_new_line_before_else                                         = false
+csharp_new_line_before_catch                                        = false
+csharp_new_line_before_finally                                      = false
+csharp_new_line_before_members_in_object_initializers               = false
+csharp_new_line_before_members_in_anonymous_types                   = false
+
+# Spacing settings
+csharp_indent_switch_labels                                         = true
+csharp_indent_case_contents                                         = true
+
+# CA1303: Do not pass literals as localized parameters
+dotnet_diagnostic.CA1303.severity = none
+dotnet_code_quality.CA1303.severity = none
+# CA1508: Avoid dead code
+dotnet_diagnostic.CA1508.severity=silent         # Costly and too much false positives, for example https://github.com/dotnet/roslyn-analyzers/issues/5305
+
+# CA1826: Use property instead of Linq Enumerable method - exlude or default methods due to readability
+dotnet_code_quality.CA1826.exclude_ordefault_methods = true
+
+# These complaints show up when compiling for .NET 6, but we ignore them as long as compiling against .NET Framework.
+# CA1510: Use ArgumentNullException throw helper
+dotnet_diagnostic.CA1510.severity = none
+# CA1512: Use ArgumentOutOfRangeException throw helper
+dotnet_diagnostic.CA1512.severity = none
+# CA1513: Use ObjectDisposedException throw helper
+dotnet_diagnostic.CA1513.severity = silent
+# CA1859: Use concrete types when possible for improved performance
+dotnet_diagnostic.CA1859.severity = silent
+# CA1861: Avoid constant arrays as arguments
+dotnet_diagnostic.CA1861.severity = silent
+# CA1865: Use char overload
+dotnet_diagnostic.CA1865.severity = silent
+# CA2263: Prefer generic overload when type is known
+dotnet_diagnostic.CA2263.severity = silent
+
+# IDE0079: Remove unnecessary suppression
+# Doesn't seem to work , so we're just going to ignore it
+dotnet_diagnostic.IDE0079.severity = silent
+
+# IDE0130: Namespace does not match folder structure
+dotnet_diagnostic.IDE0130.severity = silent
+
+# NUnit analyzers
+dotnet_diagnostic.NUnit2045.severity = none
+
+# Visual Studio Spell Checker extension configuration [https://github.com/EWSoftware/VSSpellChecker]
+[*.{cs,csx,vb,vbx,xml,xsl,xslt,xsd,config,*proj,targets,props,TAM*}]
+
+# VSSPELL: Spell checker settings
+vsspell_section_id = a1c33b85377f4c43a718a41499fdd61a
+vsspell_additional_dictionary_folders_a1c33b85377f4c43a718a41499fdd61a = src\fxcop
+
+vsspell_code_analyzer_ignore_identifier_if_internal = true
+
+# VSSpell001: Spell Check
+dotnet_diagnostic.VSSpell001.severity = silent

@@ -1,7 +1,7 @@
 @page "/"
 @using TraStFilePlayer.Models
 @using TraStFilePlayer.Services
-@using Triamec.Tam.Motion.TrajectoryStreaming.Parser
+@using TraStFilePlayer.CsvParser
 @inject MotionSystemService MotionSystemService
 @inject PlaybackService PlaybackService
 @inject IJSRuntime JS
@@ -211,7 +211,7 @@
 
     bool _isAboutOverlayVisible;
 
-    Triamec.Tam.Motion.TrajectoryStreaming.Parser.TraStHeader? _header;
+    TraStHeader? _header;
     string? _loadedFilePath;
     double[]? _initialPositions;
 
@@ -220,6 +220,7 @@
 
     readonly List<string> _notificationLines = [];
     bool _hasError;
+    string _lastAxisErrorKey = string.Empty;
     bool _hasInvalidFile;
     bool _busy;
 
@@ -511,6 +512,14 @@
     async Task RefreshPlaybackUiAsync() {
         _state = await GetPlaybackState();
         _hasError = _state is PlaybackState.InvalidFile or PlaybackState.AxesError || PlaybackService.HasError;
+        var axisErrors = MotionSystemService.GetAxisErrors();
+        string axisErrorKey = string.Join("\n", axisErrors);
+        if (axisErrorKey != _lastAxisErrorKey) {
+            _lastAxisErrorKey = axisErrorKey;
+            foreach (var error in axisErrors) {
+                AddNotification(error);
+            }
+        }
         var notificationMessage = PlaybackService.ConsumeNotificationMessage();
         if (!string.IsNullOrEmpty(notificationMessage)) {
             AddNotification(notificationMessage);

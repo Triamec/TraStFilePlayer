@@ -14,7 +14,7 @@ namespace TraStFilePlayer.Services {
 		public static Task<string?> ShowOpenFileDialogAsync() => TraStFileService.ShowOpenFileDialogAsync();
 
 		/// <inheritdoc cref="TraStFileService.ParseFile"/>
-		public static Triamec.Tam.Motion.TrajectoryStreaming.Parser.TraStHeader ParseFile(string filePath) {
+		public static TraStFilePlayer.CsvParser.TraStHeader ParseFile(string filePath) {
 			var header = TraStFileService.ParseFile(filePath);
 			TraStFileService.AddToRecentFiles(filePath);
 			return header;

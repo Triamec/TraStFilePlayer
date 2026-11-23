@@ -1,6 +1,6 @@
 ﻿// Copyright © 2026 Triamec Motion AG
 
-using Triamec.Tam.Motion.TrajectoryStreaming.Parser;
+using TraStFilePlayer.CsvParser;
 
 namespace TraStFilePlayer.Services {
 	/// <summary>
